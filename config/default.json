@@ -1,0 +1,14 @@
+{
+  "user_agent": "AgenBroMCP/0.1.0 (Playwright; Chromium)",
+  "viewport_width": 1280,
+  "viewport_height": 800,
+  "timeout_ms": 10000,
+  "ocr_langs": "eng+rus",
+  "ocr_min_conf": 50.0,
+  "min_screenshot_bytes": 500,
+  "max_actions": 50,
+  "max_screenshots": 100,
+  "max_downloads": 100,
+  "headless": true,
+  "allowed_domains": []
+}

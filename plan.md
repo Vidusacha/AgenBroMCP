@@ -22,9 +22,9 @@
 
 ## Фаза 1 — сессия и артефакты
 Цель: стабильная сессия, папки артефактов, именованный снапшот на каждую страницу.
-- [ ] структура: `artifacts/<session>/<page>/` (`page.html`, `page.png`, `manifest.json`, `actions.log`)
-- [ ] config: `user-agent`, `viewport`, `timeout`, `languages OCR`
-- [ ] запуск/закрытие сессии, `cookie`/`storage_state` persistence
+- [x] структура: `artifacts/<session>/<page>/` (`page.html`, `page.png`, `manifest.json`, `actions.log`)
+- [x] config: `user-agent`, `viewport`, `timeout`, `languages OCR`
+- [x] запуск/закрытие сессии, `cookie`/`storage_state` persistence
 - Тесты:
   - `test_open_page_creates_dir`: открыть тестовую страницу → создаётся каталог, в нём `page.html`, `page.png`, `manifest.json`.
   - `test_manifest_fields`: manifest содержит `url`, `title`, `screenshot`, `html_path`, `ts`.
@@ -34,8 +34,8 @@
 
 ## Фаза 2 — читатель страницы (текст, ссылки, список картинок)
 Цель: из DOM извлечь структурированный контент: заголовки, текст, ссылки, список картинок (URL, alt, role).
-- [ ] `read_text()`, `read_links()`, `read_images()`, `read_headings()`
-- [ ] accessibility-tree snapshot (roles, labels) — для маппинга элементов
+- [x] `read_text()`, `read_links()`, `read_images()`, `read_headings()`
+- [x] accessibility-tree snapshot (roles, labels) — для маппинга элементов
 - Тесты:
   - `test_read_links`: на странице с 2 известными ссылками возвращены 2 объекта с `href`+`text`.
   - `test_read_images_inventory`: на странице с `<img>` (`alt="logo"`) inventory содержит URL, alt, natural size.
@@ -45,9 +45,9 @@
 
 ## Фаза 3 — картинки: инвентарь + скачивание + OCR
 Цель: каждую картинку страницы → инвентарь → сохранить → OCR → текст в манифесте.
-- [ ] download/capture pipeline: захват картинки → save PNG → preprocess (resize, grayscale, binarize/contrast) → tesseract lang
-- [ ] OCR-запись: `manifest.images[i] = {url, alt, size, file, ocr_text, conf}`
-- [ ] fallback: если OCR пусто → `alt`/подпись; если `alt` пусто → пометка `ocr_failed`
+- [x] download/capture pipeline: захват картинки → save PNG → preprocess (resize, grayscale, binarize/contrast) → tesseract lang
+- [x] OCR-запись: `manifest.images[i] = {url, alt, size, file, ocr_text, conf}`
+- [x] fallback: если OCR пусто → `alt`/подпись; если `alt` пусто → пометка `ocr_failed`
 - Тесты:
   - `test_ocr_synthetic`: PIL PNG с текстом «ABC123» → tesseract вернёт строку, содержащую `ABC123` (порог conf).
   - `test_ocr_real_image`: скачанная картинка с известным текстом (fixture) → OCR содержит контрольную строку.
@@ -58,8 +58,8 @@
 
 ## Фаза 4 — активные элементы: маппинг selector → роль
 Цель: единый реестр интерактивных элементов: `input`, `select`, `checkbox`, `radio`, `button`, `link`, с `label`/`name`/`accessible-name`.
-- [ ] `collect_actionables()` → `{id, role, label, value, selector, href}`
-- [ ] приоритет selector: `id` > `name` > `aria-label` > текст кнопки > `css-path` (стабильный) + `data-agb-id`
+- [x] `collect_actionables()` → `{id, role, label, value, selector, href}`
+- [x] приоритет selector: `id` > `name` > `aria-label` > текст кнопки > `css-path` (стабильный) + `data-agb-id`
 - Тесты:
   - `test_collect_inputs`: на fixture-форме собраны все `<input>` с `label`.
   - `test_button_text`: кнопка «Submit» имеет `text="Submit"`.
@@ -69,8 +69,8 @@
 
 ## Фаза 5 — заполнение полей
 Цель: fill inputs, select options, toggle checkbox/radio; проверка DOM post-fill.
-- [ ] `fill(selector, value)`, `select(selector, option)`, `check/uncheck`
-- [ ] записать в `actions.log`: `{action, selector, value, before, after}`
+- [x] `fill(selector, value)`, `select(selector, option)`, `check/uncheck`
+- [x] записать в `actions.log`: `{action, selector, value, before, after}`
 - Тесты:
   - `test_fill_text`: `input name="q"` → `value="hello"` → DOM `value == "hello"`.
   - `test_select`: `select` → `value ==` выбранной опции.
@@ -80,8 +80,8 @@
 
 ## Фаза 6 — нажатие/клики/ссылки
 Цель: click button/link, press Enter; фиксация state-перехода.
-- [ ] `click(selector)`, `press(key)`, `goto(url)`
-- [ ] post-action snapshot: screenshot + html diff + url
+- [x] `click(selector)`, `press(key)`, `goto(url)`
+- [x] post-action snapshot: screenshot + html diff + url
 - Тесты:
   - `test_click_navigates`: клик по ссылке меняет `url`; скриншот и html-диф записаны.
   - `test_click_button_state`: кнопка-переключатель меняет DOM-состояние (`checked`/`text`), зафиксировано в diff.
@@ -91,10 +91,10 @@
 
 ## Фаза 7 — протокол управления (stdin JSON + MCP Server)
 Цель: агент подаёт действия через `stdin` или вызывает MCP-инструменты; драйвер исполняет, пишет артефакты; агент читает и решает.
-- [ ] JSON-schema действий: `{op: open|fill|click|press|read|select|check, target, value, session}`
-- [ ] результат: `{ok, artifacts[], state, page}`
-- [ ] MCP Server (`stdio`) с тулами `browser_open`, `browser_read`, `browser_fill`, `browser_select`, `browser_check`, `browser_click`, `browser_press`
-- [ ] ошибки/таймауты/валидация
+- [x] JSON-schema действий: `{op: open|fill|click|press|read|select|check, target, value, session}`
+- [x] результат: `{ok, artifacts[], state, page}`
+- [x] MCP Server (`stdio`) с тулами `browser_open`, `browser_read`, `browser_fill`, `browser_select`, `browser_check`, `browser_click`, `browser_press`
+- [x] ошибки/таймауты/валидация
 - Тесты:
   - `test_protocol_roundtrip`: `open→read→fill→click` pipeline через `stdin` даёт корректную цепочку артефактов.
   - `test_bad_action_rejected`: `{op:"teleport"}` → `{ok:false, error}` без изменения состояния.
@@ -105,8 +105,8 @@
 
 ## Фаза 8 — состояние и мульти-страниц
 Цель: cookies, storage, логин, навигация между страницами, diff-мониторинг состояния.
-- [ ] save/load `storage_state`
-- [ ] page-diff: hash html + screenshot, записывать в session-лог
+- [x] save/load `storage_state`
+- [x] page-diff: hash html + screenshot, записывать в session-лог
 - Тесты:
   - `test_login_persists`: fill login+password → click → `storage_state` сохранён; следующая сессия = авторизована.
   - `test_multi_page_state`: 3 страницы, diff записан для каждой.
@@ -115,8 +115,8 @@
 
 ## Фаза 9 — безопасность и границы
 Цель: не выполнять деструктивных/опасных действий, лимиты, подтверждения.
-- [ ] allow-list доменов; лимит действий; запрет destructive submit/click без флага подтверждения
-- [ ] таймауты: click/fill/navigate; max screenshots; max downloads
+- [x] allow-list доменов; лимит действий; запрет destructive submit/click без флага подтверждения
+- [x] таймауты: click/fill/navigate; max screenshots; max downloads
 - Тесты:
   - `test_blocked_op`: action с `{danger:true}` или клик по опасной кнопке без подтверждения → `{ok:false}`.
   - `test_limits`: превышение лимита действий → ошибка, не зависание.
@@ -125,9 +125,9 @@
 
 ## Фаза 10 — упаковка в репозиторий
 Цель: layout в целевом repo, конфиг, CLI, MCP-сервер, тесты, документация и скрипты миграции.
-- [ ] `src/driver/`, `tests/`, `fixtures/`, `config/`, `artifacts/` (gitignored), `scripts/`
-- [ ] CLI: `run --url --session --actions file` и MCP entry point `agenbro-mcp`
-- [ ] CI/локальный прогон полного тест-сьюта
+- [x] `src/driver/`, `tests/`, `fixtures/`, `config/`, `artifacts/` (gitignored), `scripts/`
+- [x] CLI: `run --url --session --actions file` и MCP entry point `agenbro-mcp`
+- [x] CI/локальный прогон полного тест-сьюта
 - Тесты:
   - `test_repo_layout`: файлы по структуре присутствуют.
   - `test_cli_smoke`: CLI открывает fixture-страницу, пишет артефакты.

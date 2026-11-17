@@ -1,88 +1,91 @@
-# AgenBroMCP
+# AgenBroMCP — Portable Browser Driver & MCP Server
 
-**Переносимый драйвер браузера + MCP-сервер**: открывает страницы, читает контент из DOM (включая текст на картинках через OCR), заполняет формы и выполняет клики/переходы — с полной записью артефактов на диск.
+Browser automation driver and Model Context Protocol (MCP) server built on **Playwright (Chromium)** and **Tesseract OCR**.
+Opens pages, extracts structured DOM content, captures/downloads images and runs OCR, maps interactive elements, fills forms, executes clicks/transitions, and writes deterministic audit artifacts (`page.html`, `page.png`, `page.diff`, `manifest.json`, `actions.log`, `storage_state.json`).
 
-## Что это
+**Status:** Phases 0–10 complete — 45 tests green (`uv run pytest`). Full usage guide: [usage.md](usage.md).
 
-AgenBroMCP управляется агентом через два интерфейса:
+---
 
-1. **MCP Server (`stdio`)** — стандартные MCP-инструменты для любого MCP-клиента (на базе официального `mcp` SDK / FastMCP).
-2. **JSON-действия через `stdin` / CLI** — драйвер исполняет команды, пишет артефакты и возвращает JSON-ответ.
+## Quick Migration & Setup on Any Machine
 
-Каждая страница фиксируется снапшотом: `artifacts/<session>/<page>/` → `page.html`, `page.png`, `manifest.json`, `actions.log`. Ничего не «выдумывается»: весь контент извлекается из DOM и пикселей, OCR-текст картинок записывается в манифест с честной пометкой `ocr_failed`, если распознавание не удалось.
-
-## Возможности
-
-| Область | Инструменты |
-|---|---|
-| Сессия и артефакты | `open_page`, снапшоты, `storage_state` (cookies) |
-| Читатель страницы | текст, ссылки, заголовки, инвентарь картинок, accessibility-tree |
-| Картинки | захват через рендер браузера, препроцессинг, OCR (`tesseract` + `rapidocr` fallback) |
-| Активные элементы | реестр `collect_actionables()`: `input`, `select`, `checkbox`, `radio`, `button`, `link` |
-| Формы | `fill`, `select`, `check` / `uncheck` — каждый шаг логируется (`before`/`after`) |
-| Клики и переходы | `click`, `press`, `goto` + пост-экшен снапшот (скриншот, HTML-diff, URL) |
-| Протокол | JSON-команды `{op, target, value, session}` → ответ `{ok, artifacts[], state, page}` |
-
-## Установка
-
-```bash
-git clone https://github.com/Vidusacha/AgenBroMCP.git
-cd AgenBroMCP
-uv sync                      # или: pip install -r requirements.txt
-playwright install chromium  # браузер
-scripts/bootstrap.ps1        # Windows  /  scripts/bootstrap.sh — Linux/macOS
+### Windows (PowerShell)
+```powershell
+./scripts/bootstrap.ps1
+uv run pytest -v
 ```
 
-Зависимости: Python 3.11+, Playwright, Chromium. OCR: системный `tesseract` (с автопоиском пути) **или** portable-fallback `rapidocr-onnxruntime` (работает сразу после `pip install`, без системных бинарников).
+### Linux / macOS (Bash)
+```bash
+chmod +x scripts/bootstrap.sh
+./scripts/bootstrap.sh
+uv run pytest -v
+```
 
-## Использование
+The bootstrap script automatically verifies/installs `uv`, portable `Tesseract-OCR` (including `eng` and `rus` language packs), syncs `.venv` from `pyproject.toml` / `uv.lock`, and installs Playwright Chromium.
 
-**Как MCP-сервер** (например, в MCP-клиенте):
+---
 
+## Running as an MCP Server
+
+Entry point: `agenbro-mcp` (or `uv run python -m driver.mcp_server`).
+
+Example MCP client configuration (`mcp_config.json`):
 ```json
 {
   "mcpServers": {
-    "agenbro": { "command": "python", "args": ["-m", "agenbro.mcp_server"] }
+    "agenbro": {
+      "command": "uv",
+      "args": [
+        "--directory",
+        "D:/Workarea/AgenBroMCP",
+        "run",
+        "agenbro-mcp"
+      ]
+    }
   }
 }
 ```
 
-Инструменты: `browser_open`, `browser_read`, `browser_fill`, `browser_select`, `browser_check`, `browser_click`, `browser_press`.
+### Exposed MCP Tools
+- `browser_open(url, session="default")` — Open URL, capture HTML/PNG/OCR artifacts, return `manifest.json`.
+- `browser_read(session="default")` — Extract headings, clean text blocks, links, image OCR inventory, and actionable elements.
+- `browser_fill(selector, value, session="default")` — Fill input/textarea and log `before`/`after` values.
+- `browser_select(selector, option, session="default")` — Select dropdown option.
+- `browser_check(selector, checked=True, session="default")` — Check or uncheck checkbox/radio.
+- `browser_click(selector, session="default", danger=False, confirm=False)` — Click button/link and record transition diff.
+- `browser_press(key="Enter", selector=None, session="default")` — Press keyboard key and capture state transition.
+- `browser_close_session(session="default")` — Save `storage_state.json` and close browser context.
 
-**Через CLI / JSON-stdin:**
+---
 
-```bash
-python -m agenbro.cli   # подаёт JSON-команды в stdin, получает JSON-ответы
+## Running via CLI or JSON-stdin
+
+Full command reference, action protocol schema, response format, and safety flags: see [usage.md](usage.md).
+
+### CLI Batch Mode
+```powershell
+uv run agenbro-cli run --url "https://example.com" --session "demo" --actions actions.jsonl
 ```
 
-## Тесты
-
-Каждая фаза развития покрыта приёмочными тестами (`tests/test_phase*.py`) — запуск окружения, создание артефактов, читатель DOM, OCR, реестр actionables, заполнение форм, клики, протокол. Полный план и матрица тестов: [`plan.md`](plan.md), задачи: [`TASKS.md`](TASKS.md).
-
-```bash
-pytest
+### Interactive / Stdin Stream Mode
+```powershell
+'{"op":"open","target":"https://example.com","session":"demo"}' | uv run agenbro-cli
 ```
 
-## Roadmap
+---
 
-- [x] Фаза 0 — подготовка окружения и переносимость
-- [ ] Фаза 1 — сессия и артефакты
-- [ ] Фаза 2 — читатель страницы (текст, ссылки, картиночный инвентарь)
-- [ ] Фаза 3 — картинки: инвентарь + скачивание + препроцессинг + OCR
-- [ ] Фаза 4 — реестр активных элементов (selector → роль)
-- [ ] Фаза 5 — заполнение полей
-- [ ] Фаза 6 — клики, нажатия, переходы
-- [ ] Фаза 7 — протокол управления (stdin JSON + MCP Server)
-- [ ] Фаза 8 — состояние и мульти-страничность
-- [ ] Защита от опасных действий (`danger`/`confirm` в командах)
+## Live Smoke Test (google.com, Nov 17, 2026)
 
-## Принципы
+`open https://www.google.com` → `fill input[name="q"] = "what is going on?"` → `press Enter` → `read`: the driver recorded the fill (`before=""` / `after="what is going on?"`), captured the transition to a second page snapshot, and read the structured content. Google redirected headless automation to its anti-bot `google.com/sorry` CAPTCHA wall (DDG `html` endpoint likewise serves its own error page); the same pipeline against Bing returned the full extracted search results. The wall is the site's bot defense, faithfully logged in the artifacts. Use `headless: false` + realistic `user_agent` to reduce blocking.
 
-- **Кроссплатформенность**: все пути через `pathlib.Path`, Windows / Linux / macOS.
-- **Честность агента**: драйвер не интерпретирует «по памяти» — только DOM, скриншоты и OCR-манифест.
-- **Полная трассировка**: каждое действие оставляет артефакт и запись в `actions.log` с `before`/`after`.
+---
 
-## Лицензия
-
-MIT (см. репозиторий).
-
+## Repository Structure
+- `src/driver/` — Core library (`config.py`, `env_check.py`, `ocr.py`, `reader.py`, `safety.py`, `session.py`, `protocol.py`, `cli.py`, `mcp_server.py`)
+- `config/default.json` — Default driver and safety parameters
+- `usage.md` — Full usage guide (CLI, JSON protocol, MCP, artifacts, config, safety)
+- `fixtures/` — Offline HTML and PNG fixtures for deterministic testing
+- `tests/` — Phase 0–10 + Cross-Phase Acceptance test suite
+- `scripts/` — Cross-platform bootstrap scripts (`bootstrap.ps1`, `bootstrap.sh`)
+- `artifacts/` — Runtime session snapshots and logs (gitignored)
