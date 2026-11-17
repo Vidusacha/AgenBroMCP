@@ -20,6 +20,12 @@ def build_parser() -> argparse.ArgumentParser:
     parser.add_argument("--actions", type=str, default=None, help="Path to JSON or JSONL actions file")
     parser.add_argument("--artifacts-dir", type=str, default=None, help="Override artifacts output directory")
     parser.add_argument("--config", type=str, default=None, help="Path to config JSON file")
+    parser.add_argument(
+        "--cdp",
+        type=str,
+        default=None,
+        help="Connect to an external Chrome started with --remote-debugging-port (CDP URL, e.g. http://127.0.0.1:9222)",
+    )
     return parser
 
 
@@ -30,6 +36,8 @@ def main(argv: Optional[List[str]] = None) -> int:
     cfg = DriverConfig.from_file(Path(args.config) if args.config else None)
     if args.artifacts_dir:
         cfg.artifacts_dir = Path(args.artifacts_dir).resolve()
+    if args.cdp:
+        cfg.cdp_url = args.cdp
 
     commands: List[Dict[str, Any]] = []
     if args.url:

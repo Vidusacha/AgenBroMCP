@@ -75,10 +75,37 @@ class BrowserDriver:
         self.last_html_content: str = ""
 
     def start(self) -> None:
-        """Start Playwright Chromium and initialize BrowserContext (loading storage_state if present)."""
+        """Start Playwright Chromium (managed mode) or connect to an external Chrome over CDP, then initialize BrowserContext."""
         if self._page is not None:
             return
         self._pw = sync_playwright().start()
+
+        if self.config.cdp_url:
+            # External Chrome launched with --remote-debugging-port; adopt its first context/tab as this session.
+            self._browser = self._pw.chromium.connect_over_cdp(self.config.cdp_url)
+            contexts = self._browser.contexts
+            self._context = contexts[0] if contexts else self._browser.new_context()
+            self._context.set_default_timeout(self.config.timeout_ms)
+            pages = self._context.pages
+            self._page = pages[0] if pages else self._context.new_page()
+            self._page.set_default_timeout(self.config.timeout_ms)
+            ts = datetime.now(timezone.utc).isoformat()
+            with self.session_state_log.open("a", encoding="utf-8") as sf:
+                sf.write(
+                    json.dumps(
+                        {
+                            "ts": ts,
+                            "session": self.session_id,
+                            "mode": "cdp",
+                            "cdp_url": self.config.cdp_url,
+                            "adopted_pages": len(self._context.pages),
+                        },
+                        ensure_ascii=False,
+                    )
+                    + "\n"
+                )
+            return
+
         self._browser = self._pw.chromium.launch(headless=self.config.headless)
 
         context_kwargs: Dict[str, Any] = {
@@ -104,11 +131,13 @@ class BrowserDriver:
         return self._page
 
     def save_state(self) -> Optional[Path]:
-        """Persist cookies and localStorage to session storage_state.json."""
+        """Persist cookies and localStorage to session storage_state.json (skipped silently in CDP mode if profile state is not exportable)."""
         if self._context is not None:
-            self.session_dir.mkdir(parents=True, exist_ok=True)
-            self._context.storage_state(path=str(self.storage_state_path))
-            return self.storage_state_path
+            try:
+                self._context.storage_state(path=str(self.storage_state_path))
+                return self.storage_state_path
+            except Exception:
+                return None
         return None
 
     def close(self) -> None:

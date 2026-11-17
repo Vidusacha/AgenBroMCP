@@ -36,6 +36,18 @@ uv run agenbro-cli run --url "https://www.google.com" --session "demo" --actions
 - `--session` sets the default session id for commands without an explicit `session`.
 - Every command prints one JSON response line to stdout, in execution order.
 - `--artifacts-dir <path>` overrides the artifacts output directory; `--config <path>` loads an alternative config.
+- `--cdp <url>` drives an **external Chrome** over CDP (see below).
+
+### External Chrome (CDP connect mode)
+Start Chrome with a debug port and a persistent profile — its cookies, logins and extensions are used by the driver, and the profile stays across runs (login once, it is kept):
+```powershell
+# one-time setup: log in to everything you use inside this profile
+Start-Process "C:\Program Files\Google\Chrome\Application\chrome.exe" `
+  -ArgumentList '--remote-debugging-port=9222','--user-data-dir=C:\ChromeAgenBro'
+
+uv run agenbro-cli run --cdp http://127.0.0.1:9222 --session chrome --actions actions.jsonl
+```
+The session adopts the first existing tab of that Chrome. In connect mode `headless`, `user_agent` and `viewport` are ignored (real browser fingerprint), `storage_state` export is skipped (the profile itself is the persistent store), and closing the session disconnects from Chrome without closing it. Config-file key `cdp_url` is equivalent to `--cdp`. URL allowlist and action limits apply as usual.
 
 ### Stream mode (stdin)
 ```powershell
@@ -199,6 +211,7 @@ artifacts/<session>/
 - `headless: false` shows the browser window (recommended for interactive work and to reduce anti-bot blocking).
 - Tesseract binary is auto-detected: `TESSERACT_CMD` env var → PATH → standard Windows/Linux/macOS install locations; `TESSDATA_PREFIX` is set automatically. If Tesseract is unavailable the driver falls back to RapidOCR.
 - `--config <path>` (CLI) loads an alternative config file.
+- `"cdp_url": "http://127.0.0.1:9222"` in the config file connects to an external Chrome (equivalent to `--cdp`); `null` keeps the default managed-Chromium mode.
 
 ---
 
@@ -206,6 +219,7 @@ artifacts/<session>/
 
 - Sessions are keyed by `session` name; each has its own artifacts folder and `storage_state.json`.
 - On start, a session loads its stored `storage_state.json` (cookies, localStorage) → authenticated state persists between CLI runs and MCP server restarts.
+- In CDP connect mode the persistent store is the Chrome `--user-data-dir` profile itself: log in once inside it, the login is kept for all future AgenBroMCP runs; `storage_state.json` export is skipped.
 - `browser_close_session` / CLI pool shutdown saves the state automatically.
 
 ---

@@ -3,7 +3,7 @@
 Browser automation driver and Model Context Protocol (MCP) server built on **Playwright (Chromium)** and **Tesseract OCR**.
 Opens pages, extracts structured DOM content, captures/downloads images and runs OCR, maps interactive elements, fills forms, executes clicks/transitions, and writes deterministic audit artifacts (`page.html`, `page.png`, `page.diff`, `manifest.json`, `actions.log`, `storage_state.json`).
 
-**Status:** Phases 0–10 complete — 45 tests green (`uv run pytest`). Full usage guide: [usage.md](usage.md).
+**Status:** Phases 0–11 complete — 46 tests green (`uv run pytest`). Full usage guide: [usage.md](usage.md).
 
 ---
 
@@ -66,6 +66,15 @@ Full command reference, action protocol schema, response format, and safety flag
 ### CLI Batch Mode
 ```powershell
 uv run agenbro-cli run --url "https://example.com" --session "demo" --actions actions.jsonl
+```
+
+### External Chrome (CDP Connect Mode)
+```powershell
+# Chrome with a debug port and a persistent profile (log in once — the login is kept)
+Start-Process "C:\Program Files\Google\Chrome\Application\chrome.exe" `
+  -ArgumentList '--remote-debugging-port=9222','--user-data-dir=C:\ChromeAgenBro'
+
+uv run agenbro-cli run --cdp http://127.0.0.1:9222 --session chrome --actions actions.jsonl
 ```
 
 ### Interactive / Stdin Stream Mode

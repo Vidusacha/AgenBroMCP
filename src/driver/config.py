@@ -75,6 +75,7 @@ class DriverConfig(BaseModel):
     max_downloads: int = 100
     headless: bool = True
     allowed_domains: List[str] = Field(default_factory=list)
+    cdp_url: Optional[str] = None
 
     @classmethod
     def from_file(cls, path: Optional[Path] = None) -> "DriverConfig":
